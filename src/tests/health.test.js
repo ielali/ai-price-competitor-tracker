@@ -18,11 +18,14 @@ describe('GET /health', () => {
 
   after(() => new Promise((resolve) => server.close(resolve)));
 
-  it('returns 200 with status ok and db connected', async () => {
+  it('returns 200 with status ok, uptime, and version', async () => {
     const res = await fetch(`${baseUrl}/health`);
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.equal(body.status, 'ok');
-    assert.equal(body.db, 'connected');
+    assert.equal(typeof body.uptime, 'number');
+    assert.ok(body.uptime >= 0);
+    assert.equal(typeof body.version, 'string');
+    assert.ok(body.version.length > 0);
   });
 });
