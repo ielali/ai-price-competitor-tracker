@@ -6,9 +6,11 @@ A Node.js/Express REST API for monitoring competitor pricing in real time. Track
 
 - **Competitor management** — store competitor details including website URL and platform (Shopify, Amazon, custom, etc.)
 - **Product tracking** — manage your own product catalog with SKUs, prices, and categories
+- **Competitor product mapping** — link each competitor's product listing to your own products
 - **Price observations** — record historical competitor prices with sale flags and timestamps
-- **Alert rules** — configure undercut and threshold-based alerts per product
+- **Alert rules** — configure `undercut`, `threshold`, `price_drop`, and `price_increase` alerts per product
 - **SQLite backend** — lightweight, file-based database with WAL mode and foreign key enforcement
+- **Cascade deletes** — deleting a user automatically removes all related competitors, products, and observations
 
 ## Requirements
 
@@ -58,6 +60,8 @@ npm run seed
 npm test
 ```
 
+Tests use Node.js's built-in test runner (`node:test`) and an in-memory SQLite database — no external services needed.
+
 ## API Endpoints
 
 ### `GET /health`
@@ -82,32 +86,98 @@ Returns server and database health status.
 
 ## Database Schema
 
-The SQLite database is initialized automatically on first run.
+The SQLite database is initialized automatically on first run with migrations applied via `src/db/init.js`.
 
 ```
 users
-  id, email, hashed_password, plan_tier, created_at
+  id            TEXT  PRIMARY KEY
+  email         TEXT  UNIQUE NOT NULL
+  hashed_password TEXT NOT NULL
+  plan_tier     TEXT  DEFAULT 'free'
+  created_at    TEXT  DEFAULT datetime('now')
 
 competitors
-  id, user_id → users, name, website_url, platform, created_at
+  id            TEXT  PRIMARY KEY
+  user_id       TEXT  → users(id) ON DELETE CASCADE
+  name          TEXT  NOT NULL
+  website_url   TEXT
+  platform      TEXT  DEFAULT 'custom'   -- e.g. shopify, amazon, custom
+  created_at    TEXT  DEFAULT datetime('now')
 
 products
-  id, user_id → users, name, sku, our_price (cents), currency, category, created_at
+  id            TEXT     PRIMARY KEY
+  user_id       TEXT     → users(id) ON DELETE CASCADE
+  name          TEXT     NOT NULL
+  sku           TEXT
+  our_price     INTEGER  NOT NULL         -- stored in cents, e.g. 7999 = $79.99
+  currency      TEXT     DEFAULT 'USD'
+  category      TEXT
+  created_at    TEXT     DEFAULT datetime('now')
 
 competitor_products
-  id, competitor_id → competitors, product_id → products,
-  external_url, external_identifier, last_checked_at
+  id                   TEXT  PRIMARY KEY
+  competitor_id        TEXT  → competitors(id) ON DELETE CASCADE
+  product_id           TEXT  → products(id)   ON DELETE CASCADE
+  external_url         TEXT                    -- URL on competitor's site
+  external_identifier  TEXT                    -- competitor's SKU / listing ID
+  last_checked_at      TEXT                    -- ISO timestamp of last scrape
 
 price_observations
-  id, competitor_product_id → competitor_products,
-  price (cents), currency, was_on_sale, observed_at
+  id                    TEXT     PRIMARY KEY
+  competitor_product_id TEXT     → competitor_products(id) ON DELETE CASCADE
+  price                 INTEGER  NOT NULL      -- stored in cents
+  currency              TEXT     DEFAULT 'USD'
+  was_on_sale           INTEGER  DEFAULT 0     -- 1 = on sale, 0 = regular price
+  observed_at           TEXT     DEFAULT datetime('now')
 
 alert_rules
-  id, user_id → users, product_id → products,
-  rule_type (undercut | threshold), threshold_value (cents), is_active, created_at
+  id              TEXT     PRIMARY KEY
+  user_id         TEXT     → users(id)    ON DELETE CASCADE
+  product_id      TEXT     → products(id) ON DELETE CASCADE
+  rule_type       TEXT     NOT NULL       -- undercut | threshold | price_drop | price_increase
+  threshold_value INTEGER                 -- relevant for threshold rules (in cents)
+  is_active       INTEGER  DEFAULT 1      -- 1 = active, 0 = disabled
+  created_at      TEXT     DEFAULT datetime('now')
 ```
 
 Prices are stored as integers in **cents** (e.g. `7999` = $79.99).
+
+### Indexes
+
+The following indexes are created automatically for query performance:
+
+| Index                    | Table                 | Column                |
+|--------------------------|-----------------------|-----------------------|
+| `idx_competitors_user`   | competitors           | user_id               |
+| `idx_products_user`      | products              | user_id               |
+| `idx_cp_competitor`      | competitor_products   | competitor_id         |
+| `idx_cp_product`         | competitor_products   | product_id            |
+| `idx_observations_cp`    | price_observations    | competitor_product_id |
+| `idx_observations_time`  | price_observations    | observed_at           |
+| `idx_alerts_user`        | alert_rules           | user_id               |
+| `idx_alerts_product`     | alert_rules           | product_id            |
+
+## Data Layer
+
+Each entity has its own module under `src/db/` exposing a consistent CRUD interface:
+
+| Module                      | Exports                                                                 |
+|-----------------------------|-------------------------------------------------------------------------|
+| `src/db/users.js`           | `create`, `getById`, `getByEmail`, `listByUser`, `update`, `del`        |
+| `src/db/competitors.js`     | `create`, `getById`, `listByUser`, `update`, `del`                      |
+| `src/db/products.js`        | `create`, `getById`, `listByUser`, `update`, `del`                      |
+| `src/db/competitorProducts.js` | `create`, `getById`, `listByUser`, `listByCompetitor`, `listByProduct`, `update`, `del` |
+| `src/db/priceObservations.js` | `create`, `getById`, `listByCompetitorProduct`, `listByUser`, `update`, `del` |
+| `src/db/alertRules.js`      | `create`, `getById`, `listByUser`, `listByProduct`, `update`, `del`     |
+
+### Alert rule types
+
+| `rule_type`      | Description                                                          |
+|------------------|----------------------------------------------------------------------|
+| `undercut`       | Fire when a competitor's price drops below your price               |
+| `threshold`      | Fire when a competitor's price drops below a fixed `threshold_value` |
+| `price_drop`     | Fire on any decrease in a competitor's observed price               |
+| `price_increase` | Fire on any increase in a competitor's observed price               |
 
 ## Project Structure
 
@@ -119,7 +189,7 @@ Prices are stored as integers in **cents** (e.g. `7999` = $79.99).
 │   ├── config/
 │   │   └── env.js        # Environment variable exports
 │   ├── db/
-│   │   ├── init.js       # Database connection and migrations
+│   │   ├── init.js       # Database connection, WAL/FK setup, and migrations
 │   │   ├── users.js
 │   │   ├── competitors.js
 │   │   ├── products.js
@@ -127,8 +197,8 @@ Prices are stored as integers in **cents** (e.g. `7999` = $79.99).
 │   │   ├── priceObservations.js
 │   │   └── alertRules.js
 │   └── tests/
-│       ├── health.test.js
-│       └── db.test.js
+│       ├── health.test.js  # HTTP health endpoint tests
+│       └── db.test.js      # Full CRUD + constraint tests (in-memory SQLite)
 ├── scripts/
 │   └── seed.js           # Database seed script
 ├── data/                 # SQLite database files (git-ignored)
