@@ -1,9 +1,8 @@
-import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 import express from 'express';
 import { getDb } from './db/init.js';
 import { logger } from './services/logger.js';
-import { recordRequest } from './services/metrics.js';
+import { recordRequest, getMetrics } from './services/metrics.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json');
@@ -48,6 +47,10 @@ app.get('/health', (_req, res) => {
   } catch {
     res.status(503).json({ status: 'error', uptime: Math.floor(process.uptime()), version });
   }
+});
+
+app.get('/metrics', (_req, res) => {
+  res.json(getMetrics());
 });
 
 // Global error handler

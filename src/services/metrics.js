@@ -1,12 +1,15 @@
 import { getDb } from '../db/init.js';
 import { logger } from './logger.js';
 
-const RETENTION_DAYS = parseInt(process.env.METRICS_RETENTION_DAYS ?? '30', 10);
+// EC-3 fix: || 30 handles NaN from invalid env var values
+const RETENTION_DAYS = parseInt(process.env.METRICS_RETENTION_DAYS ?? '30', 10) || 30;
 
 const ERROR_TYPES = {
   401: 'auth_error',
   403: 'auth_error',
   400: 'validation_error',
+  404: 'not_found_error',
+  405: 'method_not_allowed',
   422: 'validation_error',
   429: 'rate_limit_error',
   408: 'timeout_error',
@@ -16,7 +19,7 @@ function classifyError(status) {
   if (!status || status < 400) return null;
   if (ERROR_TYPES[status]) return ERROR_TYPES[status];
   if (status >= 500) return 'server_error';
-  return 'validation_error';
+  return 'client_error';
 }
 
 /**

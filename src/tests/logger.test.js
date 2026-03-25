@@ -18,15 +18,6 @@ describe('Logger', () => {
     captured = null;
   });
 
-  async function makeLogger(level) {
-    // Each test needs a fresh logger instance with the desired level
-    process.env.LOG_LEVEL = level;
-    // Dynamic import with cache-busting is not supported in ESM without workarounds,
-    // so we test the singleton by checking output directly.
-    const { logger } = await import('../services/logger.js');
-    return logger;
-  }
-
   it('outputs valid JSON to stdout for info level', async () => {
     const { logger } = await import('../services/logger.js');
 
@@ -96,12 +87,6 @@ describe('Logger', () => {
   });
 
   it('suppresses debug messages when LOG_LEVEL is info', async () => {
-    // The singleton was created with default (info) or whatever is set.
-    // We test by setting level to error and creating a fresh instance.
-    const { Logger } = await import('../services/logger.js').catch(() => null) ?? {};
-
-    // Since we can't re-instantiate the singleton easily, we test level filtering
-    // by monkey-patching _log and calling debug on it directly.
     const { logger } = await import('../services/logger.js');
 
     // Force level to info (2) — debug (3) should be suppressed

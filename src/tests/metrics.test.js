@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 process.env.DATABASE_PATH = ':memory:';
 
 // Import after setting DATABASE_PATH so the in-memory DB is used
-const { getDb, resetDb } = await import('../db/init.js');
+const { getDb } = await import('../db/init.js');
 const { recordRequest, getMetrics, cleanupOldLogs } = await import('../services/metrics.js');
 
 describe('Metrics', () => {
@@ -37,7 +37,7 @@ describe('Metrics', () => {
     const row = getDb().prepare(
       `SELECT error_type FROM request_logs WHERE path = '/missing' ORDER BY id DESC LIMIT 1`
     ).get();
-    assert.equal(row.error_type, 'validation_error');
+    assert.equal(row.error_type, 'not_found_error');
   });
 
   it('auth errors are categorised as auth_error', () => {
