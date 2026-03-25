@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, '../../migrations');
+const STALE_LOCK_MINUTES = 5;
 
 function ensureMigrationTables(db) {
   db.exec(`
@@ -19,6 +20,11 @@ function ensureMigrationTables(db) {
 }
 
 function acquireLock(db) {
+  // Release stale locks older than STALE_LOCK_MINUTES to recover from crashed migrations
+  db.prepare(
+    `DELETE FROM migration_locks WHERE id = 1 AND locked_at < datetime('now', ?)`
+  ).run(`-${STALE_LOCK_MINUTES} minutes`);
+
   try {
     db.prepare(`INSERT INTO migration_locks (id, locked_at) VALUES (1, datetime('now'))`).run();
     return true;
@@ -51,9 +57,9 @@ function parseMigration(filename) {
 
 /**
  * Run all pending migrations in order.
- * Uses a lock table to prevent concurrent execution.
+ * Uses a lock table with stale-lock detection to prevent concurrent execution.
  */
-export function runMigrations(db) {
+export function migrate(db) {
   ensureMigrationTables(db);
 
   if (!acquireLock(db)) {
@@ -76,6 +82,9 @@ export function runMigrations(db) {
     releaseLock(db);
   }
 }
+
+// Alias for backward compatibility
+export { migrate as runMigrations };
 
 /**
  * Roll back the most recently applied migration.

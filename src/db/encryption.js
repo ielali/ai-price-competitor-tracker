@@ -13,7 +13,11 @@ function getEncryptionKey() {
     }
     return key;
   }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_KEY environment variable is required in production');
+  }
   // Development fallback — never use in production
+  console.warn('[encryption] WARNING: ENCRYPTION_KEY not set. Using insecure development fallback. Never use in production.');
   return Buffer.alloc(KEY_BYTES, 'dev-key-not-for-production-use!!');
 }
 

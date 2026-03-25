@@ -14,7 +14,7 @@ CREATE TABLE platform_integrations (
 CREATE TABLE api_keys (
   id TEXT PRIMARY KEY,
   org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  key_hash TEXT NOT NULL,
+  key_hash TEXT NOT NULL UNIQUE,
   label TEXT,
   scopes TEXT,
   last_used_at TEXT,

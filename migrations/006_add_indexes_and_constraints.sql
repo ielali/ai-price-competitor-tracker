@@ -10,8 +10,12 @@ CREATE INDEX IF NOT EXISTS idx_alert_events_rule_triggered ON alert_events(alert
 CREATE INDEX IF NOT EXISTS idx_alert_events_triggered ON alert_events(triggered_at);
 CREATE INDEX IF NOT EXISTS idx_platform_integrations_org ON platform_integrations(org_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash_org ON api_keys(key_hash, org_id);
 
 -- Down
+DROP INDEX IF EXISTS idx_api_keys_hash_org;
+DROP INDEX IF EXISTS idx_api_keys_hash;
 DROP INDEX IF EXISTS idx_api_keys_org;
 DROP INDEX IF EXISTS idx_platform_integrations_org;
 DROP INDEX IF EXISTS idx_alert_events_triggered;

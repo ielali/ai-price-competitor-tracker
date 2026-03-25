@@ -20,18 +20,27 @@ export function create({ id, org_id, label = null, scopes = null, expires_at = n
 }
 
 export function getById(id) {
-  return getDb().prepare(`SELECT * FROM api_keys WHERE id = ?`).get(id);
+  return getDb().prepare(
+    `SELECT id, org_id, label, scopes, last_used_at, expires_at, created_at FROM api_keys WHERE id = ?`
+  ).get(id);
 }
 
-/** Verify a raw key against stored hashes for an org. Returns the matching record or null. */
+/** Verify a raw key against stored hashes for an org.
+ *  Uses composite index idx_api_keys_hash_org for efficient lookup.
+ *  Returns the matching record or null.
+ */
 export function verify(rawKey, org_id) {
   const hash = hashApiKey(rawKey);
-  return getDb().prepare(
+  const row = getDb().prepare(
     `SELECT * FROM api_keys WHERE key_hash = ? AND org_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))`
   ).get(hash, org_id) ?? null;
+  if (!row) return null;
+  getDb().prepare(`UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?`).run(row.id);
+  return row;
 }
 
 export function listByOrg(org_id) {
+  // Intentionally excludes key_hash to prevent accidental exposure
   return getDb().prepare(
     `SELECT id, org_id, label, scopes, last_used_at, expires_at, created_at FROM api_keys WHERE org_id = ? ORDER BY created_at DESC`
   ).all(org_id);

@@ -2,17 +2,12 @@ import { getDb } from './init.js';
 
 export function create({ id, alert_rule_id, competitor_product_id, old_value = null, new_value = null, change_percent = null, triggered_at = null }) {
   const db = getDb();
-  if (triggered_at) {
-    db.prepare(
-      `INSERT INTO alert_events (id, alert_rule_id, competitor_product_id, old_value, new_value, change_percent, triggered_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, alert_rule_id, competitor_product_id, old_value, new_value, change_percent, triggered_at);
-  } else {
-    db.prepare(
-      `INSERT INTO alert_events (id, alert_rule_id, competitor_product_id, old_value, new_value, change_percent)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, alert_rule_id, competitor_product_id, old_value, new_value, change_percent);
-  }
+  // Always pass triggered_at explicitly to avoid duplicated SQL branches
+  db.prepare(
+    `INSERT INTO alert_events (id, alert_rule_id, competitor_product_id, old_value, new_value, change_percent, triggered_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, alert_rule_id, competitor_product_id, old_value, new_value, change_percent,
+    triggered_at ?? new Date().toISOString());
   return getById(id);
 }
 

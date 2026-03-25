@@ -46,7 +46,6 @@ export function listByOrg(org_id) {
 
 export function update(id, fields) {
   const allowed = ['shop_domain', 'expires_at', 'is_active'];
-  const entries = Object.entries(fields).filter(([k]) => allowed.includes(k));
 
   // Handle token updates separately (need encryption)
   const tokenUpdates = [];
@@ -57,6 +56,7 @@ export function update(id, fields) {
     tokenUpdates.push(['refresh_token_encrypted', encrypt(fields.refresh_token)]);
   }
 
+  const entries = Object.entries(fields).filter(([k]) => allowed.includes(k));
   const allEntries = [...entries, ...tokenUpdates];
   if (allEntries.length === 0) return getById(id);
   const setClause = allEntries.map(([k]) => `${k} = ?`).join(', ');

@@ -7,43 +7,12 @@ export function create({ id, competitor_product_id, price, currency = 'USD', ava
     throw new Error(`Invalid availability_status "${availability_status}". Must be one of: ${VALID_STATUSES.join(', ')}`);
   }
   const db = getDb();
-  if (scraped_at) {
-    db.prepare(
-      `INSERT INTO price_snapshots (id, competitor_product_id, price, currency, availability_status, scraped_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, competitor_product_id, price, currency, availability_status, scraped_at);
-  } else {
-    db.prepare(
-      `INSERT INTO price_snapshots (id, competitor_product_id, price, currency, availability_status)
-       VALUES (?, ?, ?, ?, ?)`
-    ).run(id, competitor_product_id, price, currency, availability_status);
-  }
-  return getById(id);
-}
-
-/**
- * Bulk insert many price snapshots in a single transaction.
- * Each item: { id, competitor_product_id, price, currency?, availability_status?, scraped_at? }
- */
-export function bulkCreate(snapshots) {
-  const db = getDb();
-  const stmt = db.prepare(
+  // Always pass scraped_at explicitly to avoid duplicated SQL branches
+  db.prepare(
     `INSERT INTO price_snapshots (id, competitor_product_id, price, currency, availability_status, scraped_at)
      VALUES (?, ?, ?, ?, ?, ?)`
-  );
-  const insertMany = db.transaction((rows) => {
-    for (const row of rows) {
-      stmt.run(
-        row.id,
-        row.competitor_product_id,
-        row.price,
-        row.currency ?? 'USD',
-        row.availability_status ?? 'in_stock',
-        row.scraped_at ?? new Date().toISOString()
-      );
-    }
-  });
-  insertMany(snapshots);
+  ).run(id, competitor_product_id, price, currency, availability_status, scraped_at ?? new Date().toISOString());
+  return getById(id);
 }
 
 export function getById(id) {
@@ -73,6 +42,36 @@ export function listByOrg(org_id, { limit = 500 } = {}) {
     ORDER BY ps.scraped_at DESC
     LIMIT ?
   `).all(org_id, limit);
+}
+
+/**
+ * Bulk insert many price snapshots in a single transaction.
+ * Each item: { id, competitor_product_id, price, currency?, availability_status?, scraped_at? }
+ * Validates availability_status for each row before inserting.
+ */
+export function bulkCreate(snapshots) {
+  const db = getDb();
+  const stmt = db.prepare(
+    `INSERT INTO price_snapshots (id, competitor_product_id, price, currency, availability_status, scraped_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const insertMany = db.transaction((rows) => {
+    for (const row of rows) {
+      const status = row.availability_status ?? 'in_stock';
+      if (!VALID_STATUSES.includes(status)) {
+        throw new Error(`Invalid availability_status "${status}". Must be one of: ${VALID_STATUSES.join(', ')}`);
+      }
+      stmt.run(
+        row.id,
+        row.competitor_product_id,
+        row.price,
+        row.currency ?? 'USD',
+        status,
+        row.scraped_at ?? new Date().toISOString()
+      );
+    }
+  });
+  insertMany(snapshots);
 }
 
 export function del(id) {

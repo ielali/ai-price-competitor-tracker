@@ -12,6 +12,10 @@ import * as alertRules from '../src/db/alertRules.js';
 // Delete existing DB file so migrations always run on a clean slate
 const dbPath = process.env.DATABASE_PATH || './data/prices.db';
 if (dbPath !== ':memory:' && existsSync(dbPath)) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('ERROR: Refusing to delete database in production. Set a non-production DATABASE_PATH or NODE_ENV.');
+    process.exit(1);
+  }
   unlinkSync(dbPath);
 }
 
