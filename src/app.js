@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { getDb } from './db/init.js';
 import { landingPageHandler } from './routes/landing.js';
 import { privacyPageHandler, termsPageHandler } from './routes/staticPages.js';
+import { blogIndexHandler, blogFeedHandler, blogPostHandler } from './routes/blog.js';
+import { segmentPageHandler } from './routes/segments.js';
+import { robotsTxtHandler, sitemapHandler } from './routes/seo.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import { logger } from './services/logger.js';
@@ -27,6 +30,18 @@ app.get('/', landingPageHandler);
 // Static marketing pages
 app.get('/privacy', privacyPageHandler);
 app.get('/terms', termsPageHandler);
+
+// Technical SEO
+app.get('/robots.txt', robotsTxtHandler);
+app.get('/sitemap.xml', sitemapHandler);
+
+// Blog — /blog/feed.xml must come before /blog/:slug
+app.get('/blog', blogIndexHandler);
+app.get('/blog/feed.xml', blogFeedHandler);
+app.get('/blog/:slug', blogPostHandler);
+
+// Segment landing pages
+app.get('/for/:slug', segmentPageHandler);
 // Request/response logging middleware — skip /health to avoid noise
 app.use((req, res, next) => {
   if (req.path === '/health') return next();
