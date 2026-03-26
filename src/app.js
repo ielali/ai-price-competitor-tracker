@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { getDb } from './db/init.js';
 import { landingPageHandler } from './routes/landing.js';
 import { privacyPageHandler, termsPageHandler } from './routes/staticPages.js';
+import authRouter from './routes/auth.js';
+import usersRouter from './routes/users.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import { logger } from './services/logger.js';
@@ -27,6 +29,10 @@ app.get('/', landingPageHandler);
 // Static marketing pages
 app.get('/privacy', privacyPageHandler);
 app.get('/terms', termsPageHandler);
+
+// API routes
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/users', usersRouter);
 // Request/response logging middleware — skip /health to avoid noise
 app.use((req, res, next) => {
   if (req.path === '/health') return next();
