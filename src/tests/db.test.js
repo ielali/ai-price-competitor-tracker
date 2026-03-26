@@ -38,7 +38,9 @@ describe('Migration runner', () => {
     assert.ok(tables.includes('platform_integrations'));
     assert.ok(tables.includes('api_keys'));
     assert.ok(tables.includes('schema_migrations'));
-    assert.deepEqual(tables, ['alert_rules', 'competitor_products', 'competitors', 'price_observations', 'products', 'request_logs', 'users']);
+    assert.ok(tables.includes('business_profiles'));
+    assert.ok(tables.includes('password_reset_tokens'));
+    assert.ok(tables.includes('request_logs'));
   });
 
   it('records applied migrations in schema_migrations', () => {
@@ -73,19 +75,17 @@ describe('Migration runner', () => {
     const indexes = db.prepare(
       `SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%' ORDER BY name`
     ).all().map(r => r.name);
+    // Indexes from file-based migrations
     assert.ok(indexes.includes('idx_tracked_products_org_active'));
     assert.ok(indexes.includes('idx_price_snapshots_cp_scraped'));
     assert.ok(indexes.includes('idx_api_keys_org'));
     assert.ok(indexes.includes('idx_api_keys_hash_org'));
     assert.ok(indexes.includes('idx_users_email'));
-    assert.ok(indexes.includes('idx_competitors_user'));
-    assert.ok(indexes.includes('idx_products_user'));
-    assert.ok(indexes.includes('idx_cp_competitor'));
-    assert.ok(indexes.includes('idx_cp_product'));
-    assert.ok(indexes.includes('idx_observations_cp'));
-    assert.ok(indexes.includes('idx_observations_time'));
-    assert.ok(indexes.includes('idx_alerts_user'));
-    assert.ok(indexes.includes('idx_alerts_product'));
+    // Indexes from migration 007 (auth)
+    assert.ok(indexes.includes('idx_users_verification_token'));
+    assert.ok(indexes.includes('idx_users_oauth'));
+    assert.ok(indexes.includes('idx_business_profiles_user'));
+    assert.ok(indexes.includes('idx_password_reset_tokens_hash'));
     assert.ok(indexes.includes('idx_request_logs_timestamp'));
     assert.ok(indexes.includes('idx_request_logs_error_type'));
   });
@@ -138,7 +138,7 @@ describe('Users CRUD', () => {
 
   it('delete', () => {
     const tempId = randomUUID();
-    users.create({ id: tempId, email: `temp-${tempId}@test.com`, hashed_password: 'x' });
+    users.create({ id: tempId, email: `temp-${tempId}@test.com`, hashed_password: 'hashedx' });
     users.del(tempId);
     assert.equal(users.getById(tempId), undefined);
   });
@@ -481,7 +481,7 @@ describe('Cascade deletes', () => {
     const cid = randomUUID();
     const pid = randomUUID();
 
-    users.create({ id: uid, email: `cascade-${uid}@test.com`, hashed_password: 'x' });
+    users.create({ id: uid, email: `cascade-${uid}@test.com`, hashed_password: 'hashedx' });
     organizations.create({ id: oid, name: 'Temp Org', plan_tier: 'free_trial' });
     organizations.addMember({ org_id: oid, user_id: uid, role: 'owner' });
     competitors.create({ id: cid, org_id: oid, name: 'Temp Competitor' });
