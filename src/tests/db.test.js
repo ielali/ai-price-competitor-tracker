@@ -18,9 +18,9 @@ describe('Database initialization', () => {
   it('creates all tables', () => {
     const db = getDb();
     const tables = db.prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`
+      `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`
     ).all().map(r => r.name);
-    assert.deepEqual(tables, ['alert_rules', 'competitor_products', 'competitors', 'price_observations', 'products', 'users']);
+    assert.deepEqual(tables, ['alert_rules', 'competitor_products', 'competitors', 'price_observations', 'products', 'request_logs', 'users']);
   });
 
   it('creates all indexes', () => {
@@ -36,6 +36,8 @@ describe('Database initialization', () => {
     assert.ok(indexes.includes('idx_observations_time'));
     assert.ok(indexes.includes('idx_alerts_user'));
     assert.ok(indexes.includes('idx_alerts_product'));
+    assert.ok(indexes.includes('idx_request_logs_timestamp'));
+    assert.ok(indexes.includes('idx_request_logs_error_type'));
   });
 
   it('enforces foreign keys', () => {
