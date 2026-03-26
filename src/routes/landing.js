@@ -8,7 +8,9 @@ import {
   PRICING,
   FOOTER,
   STRUCTURED_DATA,
+  FAQ,
 } from '../content/landing.js';
+import { buildFAQSchema } from '../lib/seo.js';
 
 // ---------------------------------------------------------------------------
 // CR-1: HTML escaping utility — apply to every content interpolation so that
@@ -322,9 +324,38 @@ function renderFooter() {
 function renderStructuredData() {
   // CR-2 fix: use safeJsonLd() so that any </script> sequence inside the JSON
   // cannot break out of the script block and enable script injection.
+  const faqSchema = buildFAQSchema(FAQ.items);
   return `
 <script type="application/ld+json">${safeJsonLd(STRUCTURED_DATA.organization)}</script>
-<script type="application/ld+json">${safeJsonLd(STRUCTURED_DATA.product)}</script>`;
+<script type="application/ld+json">${safeJsonLd(STRUCTURED_DATA.website)}</script>
+<script type="application/ld+json">${safeJsonLd(STRUCTURED_DATA.product)}</script>
+<script type="application/ld+json">${safeJsonLd(faqSchema)}</script>`;
+}
+
+function renderFAQ() {
+  const items = FAQ.items
+    .map(
+      (item, i) => `
+    <details class="faq-item" id="faq-item-${i + 1}">
+      <summary class="faq-question">${escapeHtml(item.question)}</summary>
+      <div class="faq-answer">
+        <p>${escapeHtml(item.answer)}</p>
+      </div>
+    </details>`,
+    )
+    .join('');
+
+  return `
+<section class="faq-section" id="faq" aria-labelledby="faq-heading">
+  <div class="container">
+    <div class="section-header">
+      <h2 id="faq-heading" class="section-heading">${escapeHtml(FAQ.heading)}</h2>
+    </div>
+    <div class="faq-list">
+      ${items}
+    </div>
+  </div>
+</section>`;
 }
 
 // CR-9 fix: extended nav script — adds Escape key and outside-click handlers
@@ -396,6 +427,7 @@ export function renderLandingPage() {
   <meta name="twitter:description" content="${escapeHtml(META.ogDescription)}">
   <meta name="twitter:image" content="${escapeHtml(META.canonicalUrl)}${escapeHtml(META.ogImage)}">
 
+  <link rel="alternate" type="application/rss+xml" title="PriceTracker Blog" href="/blog/feed.xml">
   <link rel="stylesheet" href="/assets/landing.css">
 
   ${renderStructuredData()}
@@ -412,6 +444,7 @@ export function renderLandingPage() {
     ${renderHowItWorks()}
     ${renderSocialProof()}
     ${renderPricing()}
+    ${renderFAQ()}
   </main>
 
   ${renderFooter()}

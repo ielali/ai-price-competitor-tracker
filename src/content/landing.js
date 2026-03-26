@@ -26,7 +26,7 @@ export const NAV = {
 };
 
 export const HERO = {
-  headline: 'Stop Losing Sales to Competitors with Lower Prices',
+  headline: 'Competitor Price Monitoring for Small Businesses',
   subheadline:
     'PriceTracker monitors your competitors 24/7 and alerts you within minutes when they change their prices — so you can react before you lose a customer. Starting at $50/month instead of $500+ for enterprise tools.',
   primaryCta: { label: 'Start Free Trial', href: '/signup' },
@@ -174,6 +174,20 @@ export const STRUCTURED_DATA = {
     email: 'support@pricetracker.io',
     logo: 'https://pricetracker.io/logo.png',
   },
+  website: {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'PriceTracker',
+    url: 'https://pricetracker.io',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://pricetracker.io/blog?q={search_term_string}',
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  },
   product: {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -189,4 +203,35 @@ export const STRUCTURED_DATA = {
       description: '14-day free trial, no credit card required',
     },
   },
+};
+
+export const FAQ = {
+  heading: 'Frequently Asked Questions',
+  items: [
+    {
+      question: 'How quickly will I get alerts when a competitor changes their price?',
+      answer:
+        'PriceTracker checks competitor prices every hour and sends email alerts within 30 minutes of detecting a change. You can set thresholds (e.g., only alert me if the change is more than $5) to filter out noise.',
+    },
+    {
+      question: 'Which platforms does PriceTracker monitor?',
+      answer:
+        'PriceTracker monitors any public product page, including Shopify stores, Amazon listings, eBay, WooCommerce, Etsy, and any website that displays prices publicly. No API access or partnerships required.',
+    },
+    {
+      question: 'Do I need to install anything or have technical skills?',
+      answer:
+        'No installation required on your end. Simply sign up, paste the competitor product URLs you want to track, and we start monitoring immediately. Setup takes about 10 minutes.',
+    },
+    {
+      question: 'How is PriceTracker different from enterprise tools like Prisync or Wiser?',
+      answer:
+        'Enterprise tools cost $500–$2,000/month and are built for large retail teams. PriceTracker delivers the same core capability — automated monitoring and real-time alerts — starting at $50/month, designed specifically for small businesses and individual sellers.',
+    },
+    {
+      question: 'Is there a free trial?',
+      answer:
+        'Yes. Every new account gets a 14-day free trial with full access to all features. No credit card required to start.',
+    },
+  ],
 };
