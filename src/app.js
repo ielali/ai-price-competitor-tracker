@@ -11,8 +11,9 @@ const app = express();
 
 app.use(express.json());
 
-// Serve static assets (CSS, images) from the public directory
-app.use(express.static(join(__dirname, '..', 'public')));
+// CR-6 fix: mount static assets at /assets instead of / to avoid exposing
+// any other files that may exist in the public/ directory (e.g. app.js).
+app.use('/assets', express.static(join(__dirname, '..', 'public')));
 
 // Landing page (root)
 app.get('/', landingPageHandler);

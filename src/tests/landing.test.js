@@ -224,31 +224,133 @@ describe('Landing page', () => {
       assert.match(body, /©.*PriceTracker/);
     });
 
-    // CSS
-    it('links to landing.css stylesheet', () => {
-      assert.match(body, /href="\/landing\.css"/);
+    // CR-6 fix: CSS must be served from /assets/, not from the root path
+    it('links to /assets/landing.css (CR-6)', () => {
+      assert.match(body, /href="\/assets\/landing\.css"/);
+      assert.doesNotMatch(body, /href="\/landing\.css"/);
+    });
+
+    // CR-3: Security headers
+    it('sets X-Content-Type-Options: nosniff (CR-3)', () => {
+      assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+    });
+
+    it('sets X-Frame-Options: DENY (CR-3)', () => {
+      assert.equal(res.headers.get('x-frame-options'), 'DENY');
+    });
+
+    it('sets Content-Security-Policy header (CR-3)', () => {
+      assert.ok(
+        res.headers.get('content-security-policy'),
+        'CSP header must be present'
+      );
+    });
+
+    // CR-11 fix: testimonial quotes must not have HTML quote entities
+    // (CSS ::before/::after handles typographic quotes to avoid doubling)
+    it('testimonial quotes do not contain &ldquo;/&rdquo; entities (CR-11)', () => {
+      assert.doesNotMatch(body, /&ldquo;/);
+      assert.doesNotMatch(body, /&rdquo;/);
+    });
+
+    // CR-2 fix: JSON-LD content must not contain a raw </script> sequence
+    it('JSON-LD does not contain unescaped </script> inside the JSON block (CR-2)', () => {
+      const jsonLdMatch = body.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+      assert.ok(jsonLdMatch, 'JSON-LD script block must exist');
+      assert.doesNotMatch(jsonLdMatch[1], /<\/script>/i);
+    });
+
+    // CR-9 fix: nav script must handle Escape key and outside-click
+    it('nav script handles Escape key (CR-9)', () => {
+      assert.match(body, /e\.key.*Escape|Escape.*e\.key|'Escape'|"Escape"/);
+    });
+
+    it('nav script handles outside-click to close menu (CR-9)', () => {
+      assert.match(body, /document\.addEventListener\('click'/);
     });
   });
 
   describe('GET /privacy', () => {
-    it('returns 200 with HTML', async () => {
-      const res = await fetch(`${baseUrl}/privacy`);
+    let res;
+    let body;
+
+    before(async () => {
+      res = await fetch(`${baseUrl}/privacy`);
+      body = await res.text();
+    });
+
+    it('returns 200 with HTML', () => {
       assert.equal(res.status, 200);
       assert.match(res.headers.get('content-type'), /text\/html/);
-      const body = await res.text();
+    });
+
+    it('contains Privacy Policy heading', () => {
       assert.match(body, /Privacy Policy/i);
       assert.match(body, /PriceTracker/);
+    });
+
+    // CR-3: security headers on static pages
+    it('sets security headers (CR-3)', () => {
+      assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+      assert.equal(res.headers.get('x-frame-options'), 'DENY');
+    });
+
+    // CR-7 fix: "Last updated" must be a static constant, not new Date()
+    it('shows static Last updated date, not a runtime date (CR-7)', () => {
+      assert.match(body, /Last updated:/i);
+      assert.match(body, /January 1, 2025/);
+    });
+
+    // CR-8 fix: canonical URL must point to /privacy, not homepage
+    it('canonical URL points to /privacy, not homepage (CR-8)', () => {
+      assert.match(body, /rel="canonical"[^>]*href="https:\/\/pricetracker\.io\/privacy"/);
+    });
+
+    // CR-6: CSS served from /assets/
+    it('links to /assets/landing.css (CR-6)', () => {
+      assert.match(body, /href="\/assets\/landing\.css"/);
     });
   });
 
   describe('GET /terms', () => {
-    it('returns 200 with HTML', async () => {
-      const res = await fetch(`${baseUrl}/terms`);
+    let res;
+    let body;
+
+    before(async () => {
+      res = await fetch(`${baseUrl}/terms`);
+      body = await res.text();
+    });
+
+    it('returns 200 with HTML', () => {
       assert.equal(res.status, 200);
       assert.match(res.headers.get('content-type'), /text\/html/);
-      const body = await res.text();
+    });
+
+    it('contains Terms of Service heading', () => {
       assert.match(body, /Terms of Service/i);
       assert.match(body, /PriceTracker/);
+    });
+
+    // CR-3: security headers on static pages
+    it('sets security headers (CR-3)', () => {
+      assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+      assert.equal(res.headers.get('x-frame-options'), 'DENY');
+    });
+
+    // CR-7 fix: "Last updated" must be a static constant, not new Date()
+    it('shows static Last updated date, not a runtime date (CR-7)', () => {
+      assert.match(body, /Last updated:/i);
+      assert.match(body, /January 1, 2025/);
+    });
+
+    // CR-8 fix: canonical URL must point to /terms, not homepage
+    it('canonical URL points to /terms, not homepage (CR-8)', () => {
+      assert.match(body, /rel="canonical"[^>]*href="https:\/\/pricetracker\.io\/terms"/);
+    });
+
+    // CR-6: CSS served from /assets/
+    it('links to /assets/landing.css (CR-6)', () => {
+      assert.match(body, /href="\/assets\/landing\.css"/);
     });
   });
 
