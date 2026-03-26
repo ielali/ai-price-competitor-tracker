@@ -38,6 +38,7 @@ describe('Migration runner', () => {
     assert.ok(tables.includes('platform_integrations'));
     assert.ok(tables.includes('api_keys'));
     assert.ok(tables.includes('schema_migrations'));
+    assert.deepEqual(tables, ['alert_rules', 'competitor_products', 'competitors', 'price_observations', 'products', 'request_logs', 'users']);
   });
 
   it('records applied migrations in schema_migrations', () => {
@@ -77,6 +78,16 @@ describe('Migration runner', () => {
     assert.ok(indexes.includes('idx_api_keys_org'));
     assert.ok(indexes.includes('idx_api_keys_hash_org'));
     assert.ok(indexes.includes('idx_users_email'));
+    assert.ok(indexes.includes('idx_competitors_user'));
+    assert.ok(indexes.includes('idx_products_user'));
+    assert.ok(indexes.includes('idx_cp_competitor'));
+    assert.ok(indexes.includes('idx_cp_product'));
+    assert.ok(indexes.includes('idx_observations_cp'));
+    assert.ok(indexes.includes('idx_observations_time'));
+    assert.ok(indexes.includes('idx_alerts_user'));
+    assert.ok(indexes.includes('idx_alerts_product'));
+    assert.ok(indexes.includes('idx_request_logs_timestamp'));
+    assert.ok(indexes.includes('idx_request_logs_error_type'));
   });
 });
 
