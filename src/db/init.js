@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { config } from 'dotenv';
+import { migrate } from './migrate.js';
 import { logger } from '../services/logger.js';
 
 config();
@@ -17,6 +18,7 @@ export function getDb() {
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
+    migrate(db);
     logger.debug('Running database migrations');
     runMigrations(db);
     logger.debug('Database migrations complete');
