@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { config } from 'dotenv';
+import { migrate } from './migrate.js';
+import { logger } from '../services/logger.js';
 
 config();
 
@@ -16,7 +18,10 @@ export function getDb() {
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
+    migrate(db);
+    logger.debug('Running database migrations');
     runMigrations(db);
+    logger.debug('Database migrations complete');
   }
   return db;
 }
@@ -95,5 +100,22 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_observations_time ON price_observations(observed_at);
     CREATE INDEX IF NOT EXISTS idx_alerts_user ON alert_rules(user_id);
     CREATE INDEX IF NOT EXISTS idx_alerts_product ON alert_rules(product_id);
+
+    CREATE TABLE IF NOT EXISTS request_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      method TEXT NOT NULL,
+      path TEXT NOT NULL,
+      status INTEGER,
+      duration_ms INTEGER,
+      provider TEXT,
+      model TEXT,
+      stream INTEGER DEFAULT 0,
+      key_id TEXT,
+      error_type TEXT,
+      timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_request_logs_timestamp ON request_logs(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_request_logs_error_type ON request_logs(error_type);
   `);
 }
